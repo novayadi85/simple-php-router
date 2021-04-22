@@ -76,14 +76,14 @@ class RouteResource extends LoadableRoute implements IControllerRoute
         return $this->url;
     }
 
-    protected function call($method): bool
+    protected function call($method)
     {
-        $this->setCallback([$this->controller, $method]);
+        $this->setCallback($this->controller . '@' . $method);
 
         return true;
     }
 
-    public function matchRoute(string $url, Request $request): bool
+    public function matchRoute($url, Request $request): bool
     {
         if ($this->getGroup() !== null && $this->getGroup()->matchRoute($url, $request) === false) {
             return false;
@@ -115,32 +115,32 @@ class RouteResource extends LoadableRoute implements IControllerRoute
         $method = $request->getMethod();
 
         // Delete
-        if ($method === Request::REQUEST_TYPE_DELETE && $id !== null) {
+        if ($method === static::REQUEST_TYPE_DELETE && $id !== null) {
             return $this->call($this->methodNames['destroy']);
         }
 
         // Update
-        if ($id !== null && in_array($method, [Request::REQUEST_TYPE_PATCH, Request::REQUEST_TYPE_PUT], true) === true) {
+        if ($id !== null && \in_array($method, [static::REQUEST_TYPE_PATCH, static::REQUEST_TYPE_PUT], true) === true) {
             return $this->call($this->methodNames['update']);
         }
 
         // Edit
-        if ($method === Request::REQUEST_TYPE_GET && $id !== null && $action === 'edit') {
+        if ($method === static::REQUEST_TYPE_GET && $id !== null && $action === 'edit') {
             return $this->call($this->methodNames['edit']);
         }
 
         // Create
-        if ($method === Request::REQUEST_TYPE_GET && $id === 'create') {
+        if ($method === static::REQUEST_TYPE_GET && $id === 'create') {
             return $this->call($this->methodNames['create']);
         }
 
         // Save
-        if ($method === Request::REQUEST_TYPE_POST) {
+        if ($method === static::REQUEST_TYPE_POST) {
             return $this->call($this->methodNames['store']);
         }
 
         // Show
-        if ($method === Request::REQUEST_TYPE_GET && $id !== null) {
+        if ($method === static::REQUEST_TYPE_GET && $id !== null) {
             return $this->call($this->methodNames['show']);
         }
 
@@ -190,7 +190,7 @@ class RouteResource extends LoadableRoute implements IControllerRoute
      * @param array $names
      * @return static $this
      */
-    public function setMethodNames(array $names): RouteResource
+    public function setMethodNames(array $names)
     {
         $this->methodNames = $names;
 
@@ -210,21 +210,21 @@ class RouteResource extends LoadableRoute implements IControllerRoute
     /**
      * Merge with information from another route.
      *
-     * @param array $settings
+     * @param array $values
      * @param bool $merge
      * @return static
      */
-    public function setSettings(array $settings, bool $merge = false): IRoute
+    public function setSettings(array $values, bool $merge = false): IRoute
     {
-        if (isset($settings['names']) === true) {
-            $this->names = $settings['names'];
+        if (isset($values['names']) === true) {
+            $this->names = $values['names'];
         }
 
-        if (isset($settings['methods']) === true) {
-            $this->methodNames = $settings['methods'];
+        if (isset($values['methods']) === true) {
+            $this->methodNames = $values['methods'];
         }
 
-        return parent::setSettings($settings, $merge);
+        return parent::setSettings($values, $merge);
     }
 
 }

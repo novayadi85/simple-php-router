@@ -35,7 +35,7 @@ class RouteController extends LoadableRoute implements IControllerRoute
             $method = substr($name, strrpos($name, '.') + 1);
             $newName = substr($name, 0, strrpos($name, '.'));
 
-            if (in_array($method, $this->names, true) === true && strtolower($this->name) === strtolower($newName)) {
+            if (\in_array($method, $this->names, true) === true && strtolower($this->name) === strtolower($newName)) {
                 return true;
             }
         }
@@ -64,10 +64,10 @@ class RouteController extends LoadableRoute implements IControllerRoute
         if ($method !== null) {
 
             /* Remove requestType from method-name, if it exists */
-            foreach (Request::$requestTypes as $requestType) {
+            foreach (static::$requestTypes as $requestType) {
 
                 if (stripos($method, $requestType) === 0) {
-                    $method = (string)substr($method, strlen($requestType));
+                    $method = (string)substr($method, \strlen($requestType));
                     break;
                 }
             }
@@ -77,7 +77,7 @@ class RouteController extends LoadableRoute implements IControllerRoute
 
         $group = $this->getGroup();
 
-        if ($group !== null && count($group->getDomains()) !== 0) {
+        if ($group !== null && \count($group->getDomains()) !== 0) {
             $url .= '//' . $group->getDomains()[0];
         }
 
@@ -86,7 +86,7 @@ class RouteController extends LoadableRoute implements IControllerRoute
         return '/' . trim($url, '/') . '/';
     }
 
-    public function matchRoute(string $url, Request $request): bool
+    public function matchRoute($url, Request $request): bool
     {
         if ($this->getGroup() !== null && $this->getGroup()->matchRoute($url, $request) === false) {
             return false;
@@ -102,15 +102,15 @@ class RouteController extends LoadableRoute implements IControllerRoute
         $strippedUrl = trim(str_ireplace($this->url, '/', $url), '/');
         $path = explode('/', $strippedUrl);
 
-        if (count($path) !== 0) {
+        if (\count($path) !== 0) {
 
             $method = (isset($path[0]) === false || trim($path[0]) === '') ? $this->defaultMethod : $path[0];
             $this->method = $request->getMethod() . ucfirst($method);
 
-            $this->parameters = array_slice($path, 1);
+            $this->parameters = \array_slice($path, 1);
 
             // Set callback
-            $this->setCallback([$this->controller, $this->method]);
+            $this->setCallback($this->controller . '@' . $this->method);
 
             return true;
         }
@@ -167,17 +167,17 @@ class RouteController extends LoadableRoute implements IControllerRoute
     /**
      * Merge with information from another route.
      *
-     * @param array $settings
+     * @param array $values
      * @param bool $merge
      * @return static
      */
-    public function setSettings(array $settings, bool $merge = false): IRoute
+    public function setSettings(array $values, bool $merge = false): IRoute
     {
-        if (isset($settings['names']) === true) {
-            $this->names = $settings['names'];
+        if (isset($values['names']) === true) {
+            $this->names = $values['names'];
         }
 
-        return parent::setSettings($settings, $merge);
+        return parent::setSettings($values, $merge);
     }
 
 }

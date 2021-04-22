@@ -2,48 +2,117 @@
 
 namespace Pecee\SimpleRouter\ClassLoader;
 
-use Pecee\SimpleRouter\Exceptions\ClassNotFoundHttpException;
+use DI\Container;
+use Pecee\SimpleRouter\Exceptions\NotFoundHttpException;
 
 class ClassLoader implements IClassLoader
 {
     /**
+     * Dependency injection enabled
+     * @var bool
+     */
+    protected $useDependencyInjection = false;
+
+    /**
+     * @var Container|null
+     */
+    protected $container;
+
+    /**
      * Load class
      *
      * @param string $class
-     * @return object
-     * @throws ClassNotFoundHttpException
+     * @return mixed
+     * @throws NotFoundHttpException
      */
     public function loadClass(string $class)
     {
         if (class_exists($class) === false) {
-            throw new ClassNotFoundHttpException($class, null, sprintf('Class "%s" does not exist', $class), 404, null);
+            throw new NotFoundHttpException(sprintf('Class "%s" does not exist', $class), 404);
+        }
+
+        if ($this->useDependencyInjection === true) {
+            $container = $this->getContainer();
+            if ($container !== null) {
+                try {
+                    return $container->get($class);
+                } catch (\Exception $e) {
+                    throw new NotFoundHttpException($e->getMessage(), (int)$e->getCode(), $e->getPrevious());
+                }
+            }
         }
 
         return new $class();
     }
 
     /**
-     * Called when loading class method
-     * @param object $class
-     * @param string $method
+     * Load closure
+     *
+     * @param \Closure $closure
      * @param array $parameters
-     * @return object
+     * @return mixed
+     * @throws NotFoundHttpException
      */
-    public function loadClassMethod($class, string $method, array $parameters)
+    public function loadClosure(\Closure $closure, array $parameters)
     {
-        return call_user_func_array([$class, $method], array_values($parameters));
+        if ($this->useDependencyInjection === true) {
+            $container = $this->getContainer();
+            if ($container !== null) {
+                try {
+                    return $container->call($closure, $parameters);
+                } catch (\Exception $e) {
+                    throw new NotFoundHttpException($e->getMessage(), (int)$e->getCode(), $e->getPrevious());
+                }
+            }
+        }
+
+        return \call_user_func_array($closure, $parameters);
     }
 
     /**
-     * Load closure
+     * Get dependency injector container.
      *
-     * @param Callable $closure
-     * @param array $parameters
-     * @return mixed
+     * @return Container|null
      */
-    public function loadClosure(Callable $closure, array $parameters)
+    public function getContainer(): ?Container
     {
-        return call_user_func_array($closure, array_values($parameters));
+        return $this->container;
+    }
+
+    /**
+     * Set the dependency-injector container.
+     *
+     * @param Container $container
+     * @return ClassLoader
+     */
+    public function setContainer(Container $container): self
+    {
+        $this->container = $container;
+
+        return $this;
+    }
+
+    /**
+     * Enable or disable dependency injection.
+     *
+     * @param bool $enabled
+     * @return static
+     */
+    public function useDependencyInjection(bool $enabled): self
+    {
+        $this->useDependencyInjection = $enabled;
+
+        return $this;
+    }
+
+    /**
+     * Return true if dependency injection is enabled.
+     *
+     * @return bool
+     */
+    public function isDependencyInjectionEnabled(): bool
+    {
+        return $this->useDependencyInjection;
     }
 
 }

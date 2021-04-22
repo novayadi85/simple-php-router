@@ -12,21 +12,12 @@ class BaseCsrfVerifier implements IMiddleware
     public const POST_KEY = 'csrf_token';
     public const HEADER_KEY = 'X-CSRF-TOKEN';
 
-    /**
-     * Urls to ignore. You can use * to exclude all sub-urls on a given path.
-     * For example: /admin/*
-     * @var array|null
-     */
     protected $except;
-    /**
-     * Urls to include. Can be used to include urls from a certain path.
-     * @var array|null
-     */
-    protected $include;
     protected $tokenProvider;
 
     /**
      * BaseCsrfVerifier constructor.
+     * @throws \Pecee\Http\Security\Exceptions\SecurityException
      */
     public function __construct()
     {
@@ -40,38 +31,24 @@ class BaseCsrfVerifier implements IMiddleware
      */
     protected function skip(Request $request): bool
     {
-        if ($this->except === null || count($this->except) === 0) {
+        if ($this->except === null || \count($this->except) === 0) {
             return false;
         }
 
-        foreach($this->except as $url) {
+        $max = \count($this->except) - 1;
+
+        for ($i = $max; $i >= 0; $i--) {
+            $url = $this->except[$i];
+
             $url = rtrim($url, '/');
-            if ($url[strlen($url) - 1] === '*') {
+            if ($url[\strlen($url) - 1] === '*') {
                 $url = rtrim($url, '*');
                 $skip = $request->getUrl()->contains($url);
             } else {
-                $skip = ($url === rtrim($request->getUrl()->getRelativeUrl(false), '/'));
+                $skip = ($url === $request->getUrl()->getOriginalUrl());
             }
 
             if ($skip === true) {
-
-                if(is_array($this->include) === true && count($this->include) > 0) {
-                    foreach($this->include as $includeUrl) {
-                        $includeUrl = rtrim($includeUrl, '/');
-                        if ($includeUrl[strlen($includeUrl) - 1] === '*') {
-                            $includeUrl = rtrim($includeUrl, '*');
-                            $skip = !$request->getUrl()->contains($includeUrl);
-                            break;
-                        }
-
-                        $skip = !($includeUrl === rtrim($request->getUrl()->getRelativeUrl(false), '/'));
-                    }
-                }
-
-                if($skip === false) {
-                    continue;
-                }
-
                 return true;
             }
         }
@@ -87,12 +64,13 @@ class BaseCsrfVerifier implements IMiddleware
      */
     public function handle(Request $request): void
     {
-        if ($this->skip($request) === false && $request->isPostBack() === true) {
+
+        if ($this->skip($request) === false && \in_array($request->getMethod(), ['post', 'put', 'delete'], true) === true) {
 
             $token = $request->getInputHandler()->value(
                 static::POST_KEY,
                 $request->getHeader(static::HEADER_KEY),
-                Request::$requestTypesPost
+                'post'
             );
 
             if ($this->tokenProvider->validate((string)$token) === false) {
@@ -103,6 +81,7 @@ class BaseCsrfVerifier implements IMiddleware
 
         // Refresh existing token
         $this->tokenProvider->refresh();
+
     }
 
     public function getTokenProvider(): ITokenProvider

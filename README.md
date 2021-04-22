@@ -14,7 +14,8 @@ SimpleRouter::get('/', function() {
 
 ### Support the project
 
-If you like simple-router and wish to see the continued development and maintenance of the project, please consider showing your support by buying me a coffee. Supporters will be listed under the credits section of this documentation.
+If you like simple-router and wish to see the continued development and maintenance of the project,
+please consider showing your support by buying me a coffee. Supporters will be listed under the credits section of this documentation.
 
 You can donate any amount of your choice by [clicking here](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=NNX4D2RUSALCN).
 
@@ -32,7 +33,6 @@ You can donate any amount of your choice by [clicking here](https://www.paypal.c
 		- [Helper functions](#helper-functions)
 - [Routes](#routes)
 	- [Basic routing](#basic-routing)
-		- [Class hinting](#class-hinting)
 		- [Available methods](#available-methods)
 		- [Multiple HTTP-verbs](#multiple-http-verbs)
 	- [Route parameters](#route-parameters)
@@ -51,6 +51,9 @@ You can donate any amount of your choice by [clicking here](https://www.paypal.c
 	- [Partial groups](#partial-groups)
 	- [Form Method Spoofing](#form-method-spoofing)
 	- [Accessing The Current Route](#accessing-the-current-route)
+	- [Dependency injection](#dependency-injection)
+	    - [Enabling dependency injection](#enabling-dependency-injection)
+	    - [More reading](#more-reading)
 	- [Other examples](#other-examples)
 - [CSRF-protection](#csrf-protection)
 	- [Adding CSRF-verifier](#adding-csrf-verifier)
@@ -82,15 +85,10 @@ You can donate any amount of your choice by [clicking here](https://www.paypal.c
     - [Registering new event](#registering-new-event)
     - [Custom EventHandlers](#custom-eventhandlers)
 - [Advanced](#advanced)
-	- [Disable multiple route rendering](#disable-multiple-route-rendering)
-	- [Restrict access to IP](#restrict-access-to-ip)
-	- [Setting custom base path](#setting-custom-base-path)
 	- [Url rewriting](#url-rewriting)
 		- [Changing current route](#changing-current-route)
 		- [Bootmanager: loading routes dynamically](#bootmanager-loading-routes-dynamically)
 		- [Adding routes manually](#adding-routes-manually)
-	- [Custom class-loader](#custom-class-loader)
-	  - [Integrating with php-di](#Integrating-with-php-di)
 	- [Parameters](#parameters)
 	- [Extending](#extending)
 - [Help and support](#help-and-support)
@@ -125,7 +123,7 @@ composer require pecee/simple-router
 
 The goal of this project is to create a router that is more or less 100% compatible with the Laravel documentation, while remaining as simple as possible, and as easy to integrate and change without compromising either speed or complexity. Being lightweight is the #1 priority.
 
-We've included a simple demo project for the router which can be found [here](https://github.com/skipperbent/simple-router-demo). This project should give you a basic understanding of how to setup and use simple-php-router project.
+We've included a simple demo project for the router which can be found in the `demo-project` folder. This project should give you a basic understanding of how to setup and use simple-php-router project.
 
 Please note that the demo-project only covers how to integrate the `simple-php-router` in a project without an existing framework. If you are using a framework in your project, the implementation might vary.
 
@@ -163,8 +161,6 @@ You can find the demo-project here: [https://github.com/skipperbent/simple-route
 - Sub-domain routing
 - Custom boot managers to rewrite urls to "nicer" ones.
 - Input manager; easily manage `GET`, `POST` and `FILE` values.
-- IP based restrictions.
-- Easily extendable.
 
 ## Installation
 
@@ -254,7 +250,6 @@ To add `favicon.ico` to the IIS ignore-list, add the following line to the `<con
 ```
 
 You can also make one exception for files with some extensions:
-
 ```
 <add input="{REQUEST_FILENAME}" pattern="\.ico|\.png|\.css|\.jpg" negate="true" ignoreCase="true" />
 ```
@@ -262,7 +257,6 @@ You can also make one exception for files with some extensions:
 If you are using `$_SERVER['ORIG_PATH_INFO']`, you will get `\index.php\` as part of the returned value. 
 
 **Example:**
-
 ```
 /index.php/test/mypage.php
 ```
@@ -304,6 +298,8 @@ We recommend that you add these helper functions to your project. These will all
 To implement the functions below, simply copy the code to a new file and require the file before initializing the router or copy the `helpers.php` we've included in this library.
 
 ```php
+<?php
+
 use Pecee\SimpleRouter\SimpleRouter as Router;
 use Pecee\Http\Url;
 use Pecee\Http\Response;
@@ -351,7 +347,7 @@ function request(): Request
 /**
  * Get input class
  * @param string|null $index Parameter index name
- * @param string|mixed|null $defaultValue Default return value
+ * @param string|null $defaultValue Default return value
  * @param array ...$methods Default methods
  * @return \Pecee\Http\Input\InputHandler|array|string|null
  */
@@ -406,14 +402,6 @@ Below is a very basic example of setting up a route. First parameter is the url 
 SimpleRouter::get('/', function() {
     return 'Hello world';
 });
-```
-
-### Class hinting
-
-You can use class hinting to load a class & method like this:
-
-```php
-SimpleRouter::get('/', [MyClass::class, 'myMethod']);
 ```
 
 ### Available methods
@@ -471,8 +459,7 @@ SimpleRouter::get('/posts/{post}/comments/{comment}', function ($postId, $commen
 });
 ```
 
-**Note:** Route parameters are always encased within `{` `}` braces and should consist of alphabetic characters. Route parameters can only contain certain characters like `A-Z`, `a-z`, `0-9`, `-` and `_`.
-If your route contain other characters, please see  [Custom regex for matching parameters](#custom-regex-for-matching-parameters).
+**Note:** Route parameters are always encased within {} braces and should consist of alphabetic characters. Route parameters may not contain a - character. Use an underscore (_) instead.
 
 ### Optional parameters
 
@@ -497,13 +484,13 @@ SimpleRouter::get('/user/{name}', function ($name) {
     
     // ... do stuff
     
-})->where([ 'name' => '[A-Za-z]+' ]);
+})->where('name', '[A-Za-z]+');
 
 SimpleRouter::get('/user/{id}', function ($id) {
     
     // ... do stuff
     
-})->where([ 'id' => '[0-9]+' ]);
+})->where('id', '[0-9]+');
 
 SimpleRouter::get('/user/{id}/{name}', function ($id, $name) {
     
@@ -535,12 +522,10 @@ SimpleRouter::all('/ajax/abc/123', function($param1, $param2) {
 
 ### Custom regex for matching parameters
 
-By default simple-php-router uses the `[\w\-]+` regular expression. It will match `A-Z`, `a-z`, `0-9`, `-` and `_` characters in parameters.
+By default simple-php-router uses the `\w` regular expression when matching parameters.
 This decision was made with speed and reliability in mind, as this match will match both letters, number and most of the used symbols on the internet.
 
-However, sometimes it can be necessary to add a custom regular expression to match more advanced characters like foreign letters `æ ø å` etc.
-
-You can test your custom regular expression by using on the site [Regex101.com](https://www.regex101.com).
+However, sometimes it can be necessary to add a custom regular expression to match more advanced characters like `-` etc.
 
 Instead of adding a custom regular expression to all your parameters, you can simply add a global regular expression which will be used on all the parameters on the route.
 
@@ -548,16 +533,16 @@ Instead of adding a custom regular expression to all your parameters, you can si
 
 #### Example
 
-This example will ensure that all parameters use the `[\w\-\æ\ø\å]+` (`a-z`, `A-Z`, `-`, `_`, `0-9`, `æ`, `ø`, `å`) regular expression when parsing.
+This example will ensure that all parameters use the `[\w\-]+` regular expression when parsing.
 
 ```php
-SimpleRouter::get('/path/{parameter}', 'VideoController@home', ['defaultParameterRegex' => '[\w\-\æ\ø\å]+']);
+SimpleRouter::get('/path/{parameter}', 'VideoController@home', ['defaultParameterRegex' => '[\w\-]+']);
 ```
 
 You can also apply this setting to a group if you need multiple routes to use your custom regular expression when parsing parameters.
 
 ```php
-SimpleRouter::group(['defaultParameterRegex' => '[\w\-\æ\ø\å]+'], function() {
+SimpleRouter::group(['defaultParameterRegex' => '[\w\-]+'], function() {
 
     SimpleRouter::get('/path/{parameter}', 'VideoController@home');
 
@@ -636,23 +621,6 @@ SimpleRouter::group(['namespace' => 'Admin'], function () {
 });
 ```
 
-You can add parameters to the prefixes of your routes.
-
-Parameters from your previous routes will be injected 
-into your routes after any route-required parameters, starting from oldest to newest.
-
-```php
-SimpleRouter::group(['prefix' => '/lang/{lang}'], function ($language) {
-    
-    SimpleRouter::get('/about', function($language) {
-    	
-    	// Will match /lang/da/about
-    	
-    });
-    
-});
-```
-
 ### Subdomain-routing
 
 Route groups may also be used to handle sub-domain routing. Sub-domains may be assigned route parameters just like route urls, allowing you to capture a portion of the sub-domain for usage in your route or controller. The sub-domain may be specified using the `domain` key on the group attribute array:
@@ -677,36 +645,28 @@ SimpleRouter::group(['prefix' => '/admin'], function () {
 });
 ```
 
-You can also use parameters in your groups:
-
-```php
-SimpleRouter::group(['prefix' => '/lang/{language}'], function ($language) {
-    SimpleRouter::get('/users', function ($language)    {
-        // Matches The "/lang/da/users" URL
-    });
-});
-```
-
 ## Partial groups
 
-Partial router groups has the same benefits as a normal group, but **are only rendered once the url has matched** 
-in contrast to a normal group which are always rendered in order to retrieve it's child routes.
-Partial groups are therefore more like a hybrid of a traditional route with the benefits of a group.
+Partial router groups has the same benefits as a normal group, but supports parameters and are only rendered once the url has matched.
 
-This can be extremely useful in situations where you only want special routes to be added, but only when a certain criteria or logic has been met.
+This can be extremely useful in situations, where you only want special routes to be added, when a certain criteria or logic has been met.
 
-**NOTE:** Use partial groups with caution as routes added within are only rendered and available once the url of the partial-group has matched. 
-This can cause `url()` not to find urls for the routes added within before the partial-group has been matched and is rendered.
+**NOTE:** Use partial groups with caution as routes added within are only rendered and available once the url of the partial-group has matched. This can cause `url()` not to find urls for the routes added within.
 
 **Example:**
 
 ```php
-SimpleRouter::partialGroup('/plugin/{name}', function ($plugin) {
+SimpleRouter::partialGroup('/admin/{applicationId}', function ($applicationId) {
 
-    // Add routes from plugin
+    SimpleRouter::get('/', function($applicationId) {
+
+        // Matches The "/admin/applicationId" URL
+
+    });
 
 });
 ```
+
 
 ## Form Method Spoofing
 
@@ -725,6 +685,88 @@ SimpleRouter::request()->getLoadedRoute();
 request()->getLoadedRoute();
 ```
 
+## Dependency injection
+
+simple-router supports dependency injection using the [`php-di`](http://php-di.org/) library.
+
+Dependency injection allows the framework to automatically "inject" (load) classes added as parameters. This can simplify your code, as you can avoid creating new instances of objects you are using often in your `Controllers` etc.
+
+Here's a basic example of a controller class using dependency injection:
+
+```php
+namespace Demo\Controllers;
+
+class DefaultController {
+    
+    public function login(User $user): string 
+    {
+        // ...
+    }
+    
+}
+```
+
+The example above will automatically create a new instance of the `User` from the `$user` parameter. This means that the `$user` class contains a new instance of the `User` class and we won't need to create a new instance our self.
+
+**WARNING:** dependency injection can have some negative impact in performance. If you experience any performance issues, we recommend disabling this functionality.
+
+### Enabling dependency injection
+
+Dependency injection is disabled per default to avoid any performance issues.
+
+Before enabling dependency injection, we recommend that you read the [Container configuration](http://php-di.org/doc/container-configuration.html) section of the php-di documentation. This section covers how to configure php-di to different environments and speed-up the performance.
+
+#### Enabling for development environment
+
+The example below should ONLY be used on a development environment.
+
+```php
+// Create our new php-di container
+$container = (new \DI\ContainerBuilder())
+            ->useAutowiring(true)
+            ->build();
+
+// Add our container to simple-router and enable dependency injection
+SimpleRouter::enableDependencyInjection($container);
+```
+
+Please check the [More reading](#more-reading) section of the documentation for useful php-di links and tutorials.
+
+#### Enabling for production environment
+
+The example below compiles the injections, which can help speed up performance. 
+
+**Note:** You should change the `$cacheDir` to a cache-storage within your project.
+
+```php
+// Cache directory
+$cacheDir = sys_get_temp_dir('simple-router');
+
+// Create our new php-di container
+$container = (new \DI\ContainerBuilder())
+            ->enableCompilation($cacheDir)
+            ->writeProxiesToFile(true, $cacheDir . '/proxies')
+            ->useAutowiring(true)
+            ->build();
+
+// Add our container to simple-router and enable dependency injection
+SimpleRouter::enableDependencyInjection($container);
+```
+
+Please check the [More reading](#more-reading) section of the documentation for useful php-di links and tutorials.
+
+### More reading
+
+For more information about dependency injection, configuration and settings - we recommend that you check the php-di documentation or some of the useful links we've gathered below.
+
+#### Useful links
+
+- [php-di documentation](http://php-di.org/doc/)
+- [Understanding dependency injection](http://php-di.org/doc/understanding-di.html)
+- [Best practices guide](http://php-di.org/doc/best-practices.html)
+- [Configuring the container](http://php-di.org/doc/container-configuration.html)
+- [Definitions](http://php-di.org/doc/definition.html)
+
 ## Other examples
 
 You can find many more examples in the `routes.php` example-file below:
@@ -741,17 +783,12 @@ SimpleRouter::group(['middleware' => \Demo\Middlewares\Site::class, 'exceptionHa
 
     SimpleRouter::get('/answers/{id}', 'ControllerAnswers@show', ['where' => ['id' => '[0-9]+']]);
 
-	/**
-     * Class hinting is supported too
-     */
-     
-     SimpleRouter::get('/answers/{id}', [ControllerAnswers::class, 'show'], ['where' => ['id' => '[0-9]+']]);
 
     /**
      * Restful resource (see IRestController interface for available methods)
      */
 
-    SimpleRouter::resource('/rest', ControllerResource::class);
+    SimpleRouter::resource('/rest', ControllerRessource::class);
 
 
     /**
@@ -772,6 +809,7 @@ SimpleRouter::group(['middleware' => \Demo\Middlewares\Site::class, 'exceptionHa
 });
 
 SimpleRouter::get('/page/404', 'ControllerPage@notFound', ['as' => 'page.notfound']);
+
 ```
 
 ---
@@ -1269,7 +1307,7 @@ All event callbacks will retrieve a `EventArgument` object as parameter. This ob
 | `EVENT_ALL`                 | - | Fires when a event is triggered. |
 | `EVENT_INIT`                | - | Fires when router is initializing and before routes are loaded. |
 | `EVENT_LOAD`                | `loadedRoutes` | Fires when all routes has been loaded and rendered, just before the output is returned. |
-| `EVENT_ADD_ROUTE`           | `route`<br>`isSubRoute` | Fires when route is added to the router. `isSubRoute` is true when sub-route is rendered. |
+| `EVENT_ADD_ROUTE`           | `route` | Fires when route is added to the router. |
 | `EVENT_REWRITE`             | `rewriteUrl`<br>`rewriteRoute` | Fires when a url-rewrite is and just before the routes are re-initialized. |
 | `EVENT_BOOT`                | `bootmanagers` | Fires when the router is booting. This happens just before boot-managers are rendered and before any routes has been loaded. |
 | `EVENT_RENDER_BOOTMANAGER`  | `bootmanagers`<br>`bootmanager` | Fires before a boot-manager is rendered. |
@@ -1391,80 +1429,6 @@ class DatabaseDebugHandler implements IEventHandler
 
 # Advanced
 
-## Disable multiple route rendering
-
-By default the router will try to execute all routes that matches a given url. To stop the router from executing any further routes any method can return a value.
-
-This behavior can be easily disabled by setting `SimpleRouter::enableMultiRouteRendering(false)` in your `routes.php` file. This is the same behavior as version 3 and below.
-
-## Restrict access to IP
-
-You can white and/or blacklist access to IP's using the build in `IpRestrictAccess` middleware.
-
-Create your own custom Middleware and extend the `IpRestrictAccess` class.
-
-The `IpRestrictAccess` class contains two properties `ipBlacklist` and `ipWhitelist` that can be added to your middleware to change which IP's that have access to your routes.
-
-You can use `*` to restrict access to a range of ips.
-
-```php
-use \Pecee\Http\Middleware\IpRestrictAccess;
-
-class IpBlockerMiddleware extends IpRestrictAccess 
-{
-
-    protected $ipBlacklist = [
-        '5.5.5.5',
-        '8.8.*',
-    ];
-
-    protected $ipWhitelist = [
-        '8.8.2.2',
-    ];
-
-}
-```
-
-You can add the middleware to multiple routes by adding your [middleware to a group](#middleware).
-
-## Setting custom base path
-
-Sometimes it can be useful to add a custom base path to all of the routes added.
-
-This can easily be done by taking advantage of the [Event Handlers](#events) support of the project.
-
-```php
-$basePath = '/basepath';
-
-$eventHandler = new EventHandler();
-$eventHandler->register(EventHandler::EVENT_ADD_ROUTE, function(EventArgument $event) use($basePath) {
-
-	$route = $event->route;
-
-	// Skip routes added by group as these will inherit the url
-	if(!$event->isSubRoute) {
-		return;
-	}
-	
-	switch (true) {
-		case $route instanceof ILoadableRoute:
-			$route->prependUrl($basePath);
-			break;
-		case $route instanceof IGroupRoute:
-			$route->prependPrefix($basePath);
-			break;
-
-	}
-	
-});
-
-TestRouter::addEventHandler($eventHandler);
-```
-
-In the example shown above, we create a new `EVENT_ADD_ROUTE` event that triggers, when a new route is added.
-We skip all subroutes as these will inherit the url from their parent. Then, if the route is a group, we change the prefix  
-otherwise we change the url.
-
 ## Url rewriting
 
 ### Changing current route
@@ -1516,7 +1480,7 @@ class CustomRouterRules implement IRouterBootManager
 
             // If the current url matches the rewrite url, we use our custom route
 
-            if($request->getUrl()->contains($url)) {
+            if($request->getUrl()->getPath() === $url) {
                 $request->setRewriteUrl($rule);
             }
         }
@@ -1562,140 +1526,6 @@ $route->setPrefix('v1');
 
 /* Add the route to the router */
 $router->addRoute($route);
-```
-
-## Custom class loader
-
-You can easily extend simple-router to support custom injection frameworks like php-di by taking advantage of the ability to add your custom class-loader.
-
-Class-loaders must inherit the `IClassLoader` interface.
-
-**Example:**
-
-```php
-class MyCustomClassLoader implements IClassLoader
-{
-    /**
-     * Load class
-     *
-     * @param string $class
-     * @return object
-     * @throws NotFoundHttpException
-     */
-    public function loadClass(string $class)
-    {
-        if (\class_exists($class) === false) {
-            throw new NotFoundHttpException(sprintf('Class "%s" does not exist', $class), 404);
-        }
-
-        return new $class();
-    }
-    
-    /**
-     * Called when loading class method
-     * @param object $class
-     * @param string $method
-     * @param array $parameters
-     * @return object
-     */
-    public function loadClassMethod($class, string $method, array $parameters)
-    {
-        return call_user_func_array([$class, $method], array_values($parameters));
-    }
-
-    /**
-     * Load closure
-     *
-     * @param Callable $closure
-     * @param array $parameters
-     * @return mixed
-     */
-    public function loadClosure(Callable $closure, array $parameters)
-    {
-        return \call_user_func_array($closure, array_values($parameters));
-    }
-
-}
-```
-
-Next, we need to configure our `routes.php` so the router uses our `MyCustomClassLoader` class for loading classes. This can be done by adding the following line to your `routes.php` file.
-
-```php
-SimpleRouter::setCustomClassLoader(new MyCustomClassLoader());
-```
-
-### Integrating with php-di
-
-php-di support was discontinued by version 4.3, however you can easily add it again by creating your own class-loader like the example below:
-
-```php
-use Pecee\SimpleRouter\Exceptions\ClassNotFoundHttpException;
-
-class MyCustomClassLoader implements IClassLoader
-{
-
-    protected $container;
-
-    public function __construct()
-    {
-        // Create our new php-di container
-        $this->container = (new \DI\ContainerBuilder())
-                    ->useAutowiring(true)
-                    ->build();
-    }
-
-    /**
-     * Load class
-     *
-     * @param string $class
-     * @return object
-     * @throws NotFoundHttpException
-     */
-    public function loadClass(string $class)
-    {
-        if (class_exists($class) === false) {
-            throw new NotFoundHttpException(sprintf('Class "%s" does not exist', $class), 404);
-        }
-
-		try {
-			return $this->container->get($class);
-		} catch (\Exception $e) {
-			throw new NotFoundHttpException($e->getMessage(), (int)$e->getCode(), $e->getPrevious());
-		}
-    }
-    
-    /**
-     * Called when loading class method
-     * @param object $class
-     * @param string $method
-     * @param array $parameters
-     * @return object
-     */
-    public function loadClassMethod($class, string $method, array $parameters)
-    {
-		try {
-			return $this->container->call([$class, $method], $parameters);
-		} catch (\Exception $e) {
-			throw new NotFoundHttpException($e->getMessage(), (int)$e->getCode(), $e->getPrevious());
-		}
-    }
-
-    /**
-     * Load closure
-     *
-     * @param Callable $closure
-     * @param array $parameters
-     * @return mixed
-     */
-    public function loadClosure(callable $closure, array $parameters)
-    {
-		try {
-			return $this->container->call($closure, $parameters);
-		} catch (\Exception $e) {
-			throw new NotFoundHttpException($e->getMessage(), (int)$e->getCode(), $e->getPrevious());
-		}
-    }
-}
 ```
 
 ## Parameters
@@ -1751,17 +1581,40 @@ You can read more about adding your own custom regular expression for matching p
 
 ### Multiple routes matches? Which one has the priority?
 
-The router will match routes in the order they're added and will render multiple routes, if they match.
+The router will match routes in the order they're added.
 
-If you want the router to stop when a route is matched, you simply return a value in your callback or stop the execution manually (using `response()->json()` etc.) or simply by returning a result.
+It's possible to render multiple routes.
+
+If you want the router to stop when a route is matched, you simply return a value in your callback or stop the execution manually (using `response()->json()` etc.). 
 
 Any returned objects that implements the `__toString()` magic method will also prevent other routes from being rendered. 
 
-If you want the router only to execute one route per request, you can [disabling multiple route rendering](#disable-multiple-route-rendering).
-
 ### Using the router on sub-paths
 
-Please refer to [Setting custom base path](#setting-custom-base-path) part of the documentation.
+Using the library on a sub-path like `localhost/project/` is not officially supported, however it is possible to get it working quite easily.
+
+Add an event that appends your sub-path when a new loadable route is added.
+
+**Example:**
+
+```php
+// ... your routes.php file
+
+if($isRunningLocally) {
+
+    $eventHandler = new EventHandler();
+    $eventHandler->register(EventHandler::EVENT_ADD_ROUTE, function (EventArgument $arg) use (&$status) {
+
+        if ($arg->route instanceof \Pecee\SimpleRouter\Route\LoadableRoute) {
+            $arg->route->prependUrl('/local-path');
+        }
+
+    });
+
+    TestRouter::addEventHandler($eventHandler);
+
+}
+```
 
 ## Debugging
 

@@ -34,7 +34,7 @@ abstract class LoadableRoute extends Route implements ILoadableRoute
 
         foreach ($this->getMiddlewares() as $middleware) {
 
-            if (is_object($middleware) === false) {
+            if (\is_object($middleware) === false) {
                 $middleware = $router->getClassLoader()->loadClass($middleware);
             }
 
@@ -42,7 +42,7 @@ abstract class LoadableRoute extends Route implements ILoadableRoute
                 throw new HttpException($middleware . ' must be inherit the IMiddleware interface');
             }
 
-            $className = get_class($middleware);
+            $className = \get_class($middleware);
 
             $router->debug('Loading middleware "%s"', $className);
             $middleware->handle($request);
@@ -60,7 +60,7 @@ abstract class LoadableRoute extends Route implements ILoadableRoute
             return null;
         }
 
-        return ((bool)preg_match($this->regex, $url) !== false);
+        return ((bool)preg_match($this->regex, $request->getHost() . $url) !== false);
     }
 
     /**
@@ -86,7 +86,7 @@ abstract class LoadableRoute extends Route implements ILoadableRoute
     }
 
     /**
-     * Prepends url while ensuring that the url has the correct formatting.
+     * Prepend url
      *
      * @param string $url
      * @return ILoadableRoute
@@ -116,7 +116,7 @@ abstract class LoadableRoute extends Route implements ILoadableRoute
 
         $group = $this->getGroup();
 
-        if ($group !== null && count($group->getDomains()) !== 0) {
+        if ($group !== null && \count($group->getDomains()) !== 0) {
             $url = '//' . $group->getDomains()[0] . $url;
         }
 
@@ -132,7 +132,7 @@ abstract class LoadableRoute extends Route implements ILoadableRoute
 
         foreach (array_keys($params) as $param) {
 
-            if ($parameters === '' || (is_array($parameters) === true && count($parameters) === 0)) {
+            if ($parameters === '' || (\is_array($parameters) === true && \count($parameters) === 0)) {
                 $value = '';
             } else {
                 $p = (array)$parameters;
@@ -183,7 +183,7 @@ abstract class LoadableRoute extends Route implements ILoadableRoute
      * @param string $regex
      * @return static
      */
-    public function setMatch(string $regex): ILoadableRoute
+    public function setMatch($regex): ILoadableRoute
     {
         $this->regex = $regex;
 
@@ -229,15 +229,15 @@ abstract class LoadableRoute extends Route implements ILoadableRoute
     /**
      * Merge with information from another route.
      *
-     * @param array $settings
+     * @param array $values
      * @param bool $merge
      * @return static
      */
-    public function setSettings(array $settings, bool $merge = false): IRoute
+    public function setSettings(array $values, bool $merge = false): IRoute
     {
-        if (isset($settings['as']) === true) {
+        if (isset($values['as']) === true) {
 
-            $name = $settings['as'];
+            $name = $values['as'];
 
             if ($this->name !== null && $merge !== false) {
                 $name .= '.' . $this->name;
@@ -246,11 +246,11 @@ abstract class LoadableRoute extends Route implements ILoadableRoute
             $this->setName($name);
         }
 
-        if (isset($settings['prefix']) === true) {
-            $this->prependUrl($settings['prefix']);
+        if (isset($values['prefix']) === true) {
+            $this->prependUrl($values['prefix']);
         }
 
-        return parent::setSettings($settings, $merge);
+        return parent::setSettings($values, $merge);
     }
 
 }

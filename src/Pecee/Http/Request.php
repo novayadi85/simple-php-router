@@ -4,52 +4,12 @@ namespace Pecee\Http;
 
 use Pecee\Http\Exceptions\MalformedUrlException;
 use Pecee\Http\Input\InputHandler;
-use Pecee\Http\Middleware\BaseCsrfVerifier;
 use Pecee\SimpleRouter\Route\ILoadableRoute;
 use Pecee\SimpleRouter\Route\RouteUrl;
 use Pecee\SimpleRouter\SimpleRouter;
 
 class Request
 {
-    public const REQUEST_TYPE_GET = 'get';
-    public const REQUEST_TYPE_POST = 'post';
-    public const REQUEST_TYPE_PUT = 'put';
-    public const REQUEST_TYPE_PATCH = 'patch';
-    public const REQUEST_TYPE_OPTIONS = 'options';
-    public const REQUEST_TYPE_DELETE = 'delete';
-    public const REQUEST_TYPE_HEAD = 'head';
-
-    public const CONTENT_TYPE_JSON = 'application/json';
-    public const CONTENT_TYPE_FORM_DATA = 'multipart/form-data';
-    public const CONTENT_TYPE_X_FORM_ENCODED = 'application/x-www-form-urlencoded';
-
-    public const FORCE_METHOD_KEY = '_method';
-
-    /**
-     * All request-types
-     * @var string[]
-     */
-    public static $requestTypes = [
-        self::REQUEST_TYPE_GET,
-        self::REQUEST_TYPE_POST,
-        self::REQUEST_TYPE_PUT,
-        self::REQUEST_TYPE_PATCH,
-        self::REQUEST_TYPE_OPTIONS,
-        self::REQUEST_TYPE_DELETE,
-        self::REQUEST_TYPE_HEAD,
-    ];
-
-    /**
-     * Post request-types.
-     * @var string[]
-     */
-    public static $requestTypesPost = [
-        self::REQUEST_TYPE_POST,
-        self::REQUEST_TYPE_PUT,
-        self::REQUEST_TYPE_PATCH,
-        self::REQUEST_TYPE_DELETE,
-    ];
-
     /**
      * Additional data
      *
@@ -62,12 +22,6 @@ class Request
      * @var array
      */
     protected $headers = [];
-
-    /**
-     * Request ContentType
-     * @var string
-     */
-    protected $contentType;
 
     /**
      * Request host
@@ -123,16 +77,17 @@ class Request
     {
         foreach ($_SERVER as $key => $value) {
             $this->headers[strtolower($key)] = $value;
-            $this->headers[str_replace('_', '-', strtolower($key))] = $value;
+            $this->headers[strtolower(str_replace('_', '-', $key))] = $value;
         }
 
         $this->setHost($this->getHeader('http-host'));
 
         // Check if special IIS header exist, otherwise use default.
-        $this->setUrl(new Url($this->getFirstHeader(['unencoded-url', 'request-uri'])));
-        $this->setContentType((string)$this->getHeader('content-type'));
-        $this->setMethod((string)($_POST[static::FORCE_METHOD_KEY] ?? $this->getHeader('request-method')));
+        $this->setUrl(new Url($this->getHeader('unencoded-url', $this->getHeader('request-uri'))));
+        
+        $this->method = strtolower($this->getHeader('request-method'));
         $this->inputHandler = new InputHandler($this);
+        $this->method = strtolower($this->inputHandler->value('_method', $this->getHeader('request-method')));
     }
 
     public function isSecure(): bool
@@ -193,15 +148,6 @@ class Request
     }
 
     /**
-     * Get the csrf token
-     * @return string|null
-     */
-    public function getCsrfToken(): ?string
-    {
-        return $this->getHeader(BaseCsrfVerifier::HEADER_KEY);
-    }
-
-    /**
      * Get all headers
      * @return array
      */
@@ -212,23 +158,19 @@ class Request
 
     /**
      * Get id address
-     * If $safe is false, this function will detect Proxys. But the user can edit this header to whatever he wants!
-     * https://stackoverflow.com/questions/3003145/how-to-get-the-client-ip-address-in-php#comment-25086804
-     * @param bool $safeMode When enabled, only safe non-spoofable headers will be returned. Note this can cause issues when using proxy.
      * @return string|null
      */
-    public function getIp(bool $safeMode = false): ?string
+    public function getIp(): ?string
     {
-        $headers = ['remote-addr'];
-        if($safeMode === false) {
-            $headers = array_merge($headers, [
-                'http-cf-connecting-ip',
-                'http-client-ip',
-                'http-x-forwarded-for',
-            ]);
+        if ($this->getHeader('http-cf-connecting-ip') !== null) {
+            return $this->getHeader('http-cf-connecting-ip');
         }
 
-        return $this->getFirstHeader($headers);
+        if ($this->getHeader('http-x-forwarded-for') !== null) {
+            return $this->getHeader('http-x-forwarded_for');
+        }
+
+        return $this->getHeader('remote-addr');
     }
 
     /**
@@ -263,72 +205,14 @@ class Request
     /**
      * Get header value by name
      *
-     * @param string $name Name of the header.
-     * @param string|null $defaultValue Value to be returned if header is not found.
-     * @param bool $tryParse When enabled the method will try to find the header from both from client (http) and server-side variants, if the header is not found.
+     * @param string $name
+     * @param string|null $defaultValue
      *
      * @return string|null
      */
-    public function getHeader(string $name, $defaultValue = null, $tryParse = true): ?string
+    public function getHeader($name, $defaultValue = null): ?string
     {
-        $name = strtolower($name);
-        $header = $this->headers[$name] ?? null;
-
-        if ($tryParse === true && $header === null) {
-            if (strpos($name, 'http-') === 0) {
-                // Trying to find client header variant which was not found, searching for header variant without http- prefix.
-                $header = $this->headers[str_replace('http-', '', $name)] ?? null;
-            } else {
-                // Trying to find server variant which was not found, searching for client variant with http- prefix.
-                $header = $this->headers['http-' . $name] ?? null;
-            }
-        }
-
-        return $header ?? $defaultValue;
-    }
-
-    /**
-     * Will try to find first header from list of headers.
-     *
-     * @param array $headers
-     * @param mixed|null $defaultValue
-     * @return mixed|null
-     */
-    public function getFirstHeader(array $headers, $defaultValue = null)
-    {
-        foreach($headers as $header) {
-            $header = $this->getHeader($header);
-            if($header !== null) {
-                return $header;
-            }
-        }
-
-        return $defaultValue;
-    }
-
-    /**
-     * Get request content-type
-     * @return string|null
-     */
-    public function getContentType(): ?string
-    {
-        return $this->contentType;
-    }
-
-    /**
-     * Set request content-type
-     * @param string $contentType
-     * @return $this
-     */
-    protected function setContentType(string $contentType): self
-    {
-        if(strpos($contentType, ';') > 0) {
-            $this->contentType = strtolower(substr($contentType, 0, strpos($contentType, ';')));
-        } else {
-            $this->contentType = strtolower($contentType);
-        }
-
-        return $this;
+        return $this->headers[strtolower($name)] ?? $defaultValue;
     }
 
     /**
@@ -347,7 +231,7 @@ class Request
      *
      * @return bool
      */
-    public function isFormatAccepted(string $format): bool
+    public function isFormatAccepted($format): bool
     {
         return ($this->getHeader('http-accept') !== null && stripos($this->getHeader('http-accept'), $format) !== false);
     }
@@ -360,16 +244,6 @@ class Request
     public function isAjax(): bool
     {
         return (strtolower($this->getHeader('http-x-requested-with')) === 'xmlhttprequest');
-    }
-
-    /**
-     * Returns true when request-method is type that could contain data in the page body.
-     * 
-     * @return bool
-     */
-    public function isPostBack(): bool
-    {
-        return in_array($this->getMethod(), static::$requestTypesPost, true);
     }
 
     /**
@@ -390,10 +264,6 @@ class Request
 
         if ($this->url->getHost() === null) {
             $this->url->setHost((string)$this->getHost());
-        }
-
-        if($this->isSecure() === true) {
-            $this->url->setScheme('https');
         }
     }
 
@@ -479,7 +349,7 @@ class Request
      */
     public function getLoadedRoute(): ?ILoadableRoute
     {
-        return (count($this->loadedRoutes) > 0) ? end($this->loadedRoutes) : null;
+        return (\count($this->loadedRoutes) > 0) ? end($this->loadedRoutes) : null;
     }
 
     /**
@@ -501,6 +371,7 @@ class Request
     public function setLoadedRoutes(array $routes): self
     {
         $this->loadedRoutes = $routes;
+
         return $this;
     }
 
@@ -513,6 +384,7 @@ class Request
     public function addLoadedRoute(ILoadableRoute $route): self
     {
         $this->loadedRoutes[] = $route;
+
         return $this;
     }
 
@@ -535,10 +407,11 @@ class Request
     public function setHasPendingRewrite(bool $boolean): self
     {
         $this->hasPendingRewrite = $boolean;
+
         return $this;
     }
 
-    public function __isset($name): bool
+    public function __isset($name)
     {
         return array_key_exists($name, $this->data) === true;
     }

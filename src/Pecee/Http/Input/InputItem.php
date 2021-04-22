@@ -2,16 +2,13 @@
 
 namespace Pecee\Http\Input;
 
-use ArrayIterator;
-use IteratorAggregate;
-
-class InputItem implements IInputItem, IteratorAggregate
+class InputItem implements IInputItem
 {
     public $index;
     public $name;
     public $value;
 
-    public function __construct(string $index, $value = null)
+    public function __construct(string $index, ?string $value = null)
     {
         $this->index = $index;
         $this->value = $value;
@@ -56,19 +53,19 @@ class InputItem implements IInputItem, IteratorAggregate
     }
 
     /**
-     * @return mixed
+     * @return string
      */
-    public function getValue()
+    public function getValue(): ?string
     {
         return $this->value;
     }
 
     /**
      * Set input value
-     * @param mixed $value
+     * @param string $value
      * @return static
      */
-    public function setValue($value): IInputItem
+    public function setValue(string $value): IInputItem
     {
         $this->value = $value;
 
@@ -77,12 +74,7 @@ class InputItem implements IInputItem, IteratorAggregate
 
     public function __toString(): string
     {
-        $value = $this->getValue();
-        return (is_array($value) === true) ? json_encode($value) : $value;
+        return (string)$this->value;
     }
 
-    public function getIterator(): ArrayIterator
-    {
-        return new ArrayIterator($this->getValue());
-    }
 }

@@ -2,7 +2,6 @@
 
 namespace Pecee\SimpleRouter\Event;
 
-use InvalidArgumentException;
 use Pecee\Http\Request;
 use Pecee\SimpleRouter\Router;
 
@@ -75,7 +74,7 @@ class EventArgument implements IEventArgument
      * @param string $name
      * @return mixed
      */
-    public function __get(string $name)
+    public function __get($name)
     {
         return $this->arguments[$name] ?? null;
     }
@@ -84,7 +83,7 @@ class EventArgument implements IEventArgument
      * @param string $name
      * @return bool
      */
-    public function __isset(string $name): bool
+    public function __isset($name)
     {
         return array_key_exists($name, $this->arguments);
     }
@@ -92,11 +91,11 @@ class EventArgument implements IEventArgument
     /**
      * @param string $name
      * @param mixed $value
-     * @throws InvalidArgumentException
+     * @throws \InvalidArgumentException
      */
-    public function __set(string $name, $value)
+    public function __set($name, $value)
     {
-        throw new InvalidArgumentException('Not supported');
+        throw new \InvalidArgumentException('Not supported');
     }
 
     /**

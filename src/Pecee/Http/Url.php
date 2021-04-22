@@ -2,10 +2,9 @@
 
 namespace Pecee\Http;
 
-use JsonSerializable;
 use Pecee\Http\Exceptions\MalformedUrlException;
 
-class Url implements JsonSerializable
+class Url implements \JsonSerializable
 {
     private $originalUrl;
 
@@ -21,7 +20,7 @@ class Url implements JsonSerializable
     /**
      * Url constructor.
      *
-     * @param ?string $url
+     * @param string $url
      * @throws MalformedUrlException
      */
     public function __construct(?string $url)
@@ -372,7 +371,7 @@ class Url implements JsonSerializable
      */
     public function getParam(string $name, ?string $defaultValue = null): ?string
     {
-        return (isset($this->getParams()[$name]) === true) ? $this->getParams()[$name] : $defaultValue;
+        return isset($this->getParams()[$name]) ?? $defaultValue;
     }
 
     /**
@@ -386,7 +385,7 @@ class Url implements JsonSerializable
     {
         $encodedUrl = preg_replace_callback(
             '/[^:\/@?&=#]+/u',
-            static function ($matches) {
+            function ($matches) {
                 return urlencode($matches[0]);
             },
             $url
@@ -410,10 +409,10 @@ class Url implements JsonSerializable
      */
     public static function arrayToParams(array $getParams = [], bool $includeEmpty = true): string
     {
-        if (count($getParams) !== 0) {
+        if (\count($getParams) !== 0) {
 
             if ($includeEmpty === false) {
-                $getParams = array_filter($getParams, static function ($item) {
+                $getParams = array_filter($getParams, function ($item) {
                     return (trim($item) !== '');
                 });
             }
@@ -427,18 +426,14 @@ class Url implements JsonSerializable
     /**
      * Returns the relative url
      *
-     * @param bool $includeParams
      * @return string
      */
-    public function getRelativeUrl($includeParams = true): string
+    public function getRelativeUrl(): string
     {
-        $path = $this->path ?? '/';
+        $params = $this->getQueryString();
 
-        if($includeParams === false) {
-            return $path;
-        }
-
-        $query = $this->getQueryString() !== '' ? '?' . $this->getQueryString() : '';
+        $path = $this->path ?? '';
+        $query = $params !== '' ? '?' . $params : '';
         $fragment = $this->fragment !== null ? '#' . $this->fragment : '';
 
         return $path . $query . $fragment;
@@ -447,10 +442,9 @@ class Url implements JsonSerializable
     /**
      * Returns the absolute url
      *
-     * @param bool $includeParams
      * @return string
      */
-    public function getAbsoluteUrl($includeParams = true): string
+    public function getAbsoluteUrl(): string
     {
         $scheme = $this->scheme !== null ? $this->scheme . '://' : '';
         $host = $this->host ?? '';
@@ -459,7 +453,7 @@ class Url implements JsonSerializable
         $pass = $this->password !== null ? ':' . $this->password : '';
         $pass = ($user || $pass) ? $pass . '@' : '';
 
-        return $scheme . $user . $pass . $host . $port . $this->getRelativeUrl($includeParams);
+        return $scheme . $user . $pass . $host . $port . $this->getRelativeUrl();
     }
 
     /**

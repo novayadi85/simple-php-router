@@ -2,7 +2,6 @@
 
 namespace Pecee\SimpleRouter\Handlers;
 
-use Closure;
 use Pecee\SimpleRouter\Event\EventArgument;
 use Pecee\SimpleRouter\Router;
 
@@ -11,13 +10,13 @@ class DebugEventHandler implements IEventHandler
 
     /**
      * Debug callback
-     * @var Closure
+     * @var \Closure
      */
     protected $callback;
 
     public function __construct()
     {
-        $this->callback = static function (EventArgument $argument) {
+        $this->callback = function (EventArgument $argument) {
             // todo: log in database
         };
     }
@@ -53,9 +52,9 @@ class DebugEventHandler implements IEventHandler
     /**
      * Set debug callback
      *
-     * @param Closure $event
+     * @param \Closure $event
      */
-    public function setCallback(Closure $event): void
+    public function setCallback(\Closure $event): void
     {
         $this->callback = $event;
     }

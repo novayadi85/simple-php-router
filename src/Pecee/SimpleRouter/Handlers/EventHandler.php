@@ -2,7 +2,6 @@
 
 namespace Pecee\SimpleRouter\Handlers;
 
-use Closure;
 use Pecee\SimpleRouter\Event\EventArgument;
 use Pecee\SimpleRouter\Router;
 
@@ -126,10 +125,10 @@ class EventHandler implements IEventHandler
      * Register new event
      *
      * @param string $name
-     * @param Closure $callback
+     * @param \Closure $callback
      * @return static
      */
-    public function register(string $name, Closure $callback): IEventHandler
+    public function register(string $name, \Closure $callback): IEventHandler
     {
         if (isset($this->registeredEvents[$name]) === true) {
             $this->registeredEvents[$name][] = $callback;
@@ -144,7 +143,7 @@ class EventHandler implements IEventHandler
      * Get events.
      *
      * @param string|null $name Filter events by name.
-     * @param array|string ...$names Add multiple names...
+     * @param array ...$names Add multiple names...
      * @return array
      */
     public function getEvents(?string $name, ...$names): array
@@ -176,7 +175,7 @@ class EventHandler implements IEventHandler
     {
         $events = $this->getEvents(static::EVENT_ALL, $name);
 
-        /* @var $event Closure */
+        /* @var $event \Closure */
         foreach ($events as $event) {
             $event(new EventArgument($name, $router, $eventArgs));
         }

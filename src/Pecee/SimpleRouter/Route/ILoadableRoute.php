@@ -40,7 +40,7 @@ interface ILoadableRoute extends IRoute
     public function setUrl(string $url): self;
 
     /**
-     * Prepends url while ensuring that the url has the correct formatting.
+     * Prepend url
      * @param string $url
      * @return ILoadableRoute
      */
@@ -82,6 +82,6 @@ interface ILoadableRoute extends IRoute
      * @param string $regex
      * @return static
      */
-    public function setMatch(string $regex): self;
+    public function setMatch($regex): self;
 
 }

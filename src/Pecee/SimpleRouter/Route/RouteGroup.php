@@ -7,7 +7,6 @@ use Pecee\SimpleRouter\Handlers\IExceptionHandler;
 
 class RouteGroup extends Route implements IGroupRoute
 {
-    protected $urlRegex = '/^%s\/?/u';
     protected $prefix;
     protected $name;
     protected $domains = [];
@@ -21,21 +20,18 @@ class RouteGroup extends Route implements IGroupRoute
      */
     public function matchDomain(Request $request): bool
     {
-        if ($this->domains === null || count($this->domains) === 0) {
+        if ($this->domains === null || \count($this->domains) === 0) {
             return true;
         }
 
         foreach ($this->domains as $domain) {
 
-            // If domain has no parameters but matches
-            if ($domain === $request->getHost()) {
-                return true;
-            }
-
             $parameters = $this->parseParameters($domain, $request->getHost(), '.*');
 
-            if ($parameters !== null && count($parameters) !== 0) {
+            if ($parameters !== null && \count($parameters) !== 0) {
+
                 $this->parameters = $parameters;
+
                 return true;
             }
         }
@@ -50,33 +46,14 @@ class RouteGroup extends Route implements IGroupRoute
      * @param Request $request
      * @return bool
      */
-    public function matchRoute(string $url, Request $request): bool
+    public function matchRoute($url, Request $request): bool
     {
         if ($this->getGroup() !== null && $this->getGroup()->matchRoute($url, $request) === false) {
             return false;
         }
 
-        if ($this->prefix !== null) {
-            /* Parse parameters from current route */
-            $parameters = $this->parseParameters($this->prefix, $url);
-
-            /* If no custom regular expression or parameters was found on this route, we stop */
-            if ($parameters === null) {
-                return false;
-            }
-
-            /* Set the parameters */
-            $this->setParameters($parameters);
-        }
-
-        $parsedPrefix = $this->prefix;
-
-        foreach ($this->getParameters() as $parameter => $value) {
-            $parsedPrefix = str_ireplace('{' . $parameter . '}', $value, $parsedPrefix);
-        }
-
         /* Skip if prefix doesn't match */
-        if ($this->prefix !== null && stripos($url, $parsedPrefix) === false) {
+        if ($this->prefix !== null && stripos($url, $this->prefix) === false) {
             return false;
         }
 
@@ -146,22 +123,11 @@ class RouteGroup extends Route implements IGroupRoute
      * @param string $prefix
      * @return static
      */
-    public function setPrefix(string $prefix): IGroupRoute
+    public function setPrefix($prefix): IGroupRoute
     {
         $this->prefix = '/' . trim($prefix, '/');
 
         return $this;
-    }
-
-    /**
-     * Prepends prefix while ensuring that the url has the correct formatting.
-     *
-     * @param string $url
-     * @return static
-     */
-    public function prependPrefix(string $url): IGroupRoute
-    {
-        return $this->setPrefix(rtrim($url, '/') . $this->prefix);
     }
 
     /**
@@ -177,27 +143,28 @@ class RouteGroup extends Route implements IGroupRoute
     /**
      * Merge with information from another route.
      *
-     * @param array $settings
+     * @param array $values
      * @param bool $merge
      * @return static
      */
-    public function setSettings(array $settings, bool $merge = false): IRoute
+    public function setSettings(array $values, bool $merge = false): IRoute
     {
-        if (isset($settings['prefix']) === true) {
-            $this->setPrefix($settings['prefix'] . $this->prefix);
+
+        if (isset($values['prefix']) === true) {
+            $this->setPrefix($values['prefix'] . $this->prefix);
         }
 
-        if ($merge === false && isset($settings['exceptionHandler']) === true) {
-            $this->setExceptionHandlers((array)$settings['exceptionHandler']);
+        if ($merge === false && isset($values['exceptionHandler']) === true) {
+            $this->setExceptionHandlers((array)$values['exceptionHandler']);
         }
 
-        if ($merge === false && isset($settings['domain']) === true) {
-            $this->setDomains((array)$settings['domain']);
+        if ($merge === false && isset($values['domain']) === true) {
+            $this->setDomains((array)$values['domain']);
         }
 
-        if (isset($settings['as']) === true) {
+        if (isset($values['as']) === true) {
 
-            $name = $settings['as'];
+            $name = $values['as'];
 
             if ($this->name !== null && $merge !== false) {
                 $name .= '.' . $this->name;
@@ -206,7 +173,7 @@ class RouteGroup extends Route implements IGroupRoute
             $this->name = $name;
         }
 
-        return parent::setSettings($settings, $merge);
+        return parent::setSettings($values, $merge);
     }
 
     /**
@@ -226,7 +193,7 @@ class RouteGroup extends Route implements IGroupRoute
             $values['as'] = $this->name;
         }
 
-        if (count($this->parameters) !== 0) {
+        if (\count($this->parameters) !== 0) {
             $values['parameters'] = $this->parameters;
         }
 
